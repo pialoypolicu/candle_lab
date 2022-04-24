@@ -32,4 +32,3 @@ class ArrivalMaterial(APIView):
         if response == 1:
             return Response({"result": data, "result_arriva_object": result_arriva_object}, status=status.HTTP_200_OK)
         return Response({"result": model_to_dict(response), "result_arriva_object": result_arriva_object}, status=status.HTTP_200_OK)
-
