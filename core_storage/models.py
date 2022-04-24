@@ -25,6 +25,9 @@ class InStock(models.Model):
     weight = models.PositiveIntegerField("Вес, гр")
     update_date = models.DateTimeField("Дата обновления", auto_now=True)
 
+    def __str__(self):
+        return self.name
+
 
 class ArrivalWait(models.Model):
     name = NameField("Название", max_length=256)
