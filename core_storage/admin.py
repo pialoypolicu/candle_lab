@@ -1,5 +1,5 @@
 from django.contrib import admin
-from core_storage.models import Purchase, InStock, ArrivalWait
+from core_storage.models import Purchase, InStock, ArrivalWait, Catalog
 
 
 class PurchaseAdmin(admin.ModelAdmin):
@@ -14,6 +14,11 @@ class ArrivaWaitAdmin(admin.ModelAdmin):
     list_display = [field.name for field in ArrivalWait._meta.get_fields()]
 
 
+class CatalogAdmin(admin.ModelAdmin):
+    list_display = ["name"]
+
+
 admin.site.register(Purchase, PurchaseAdmin)
 admin.site.register(InStock, InStockAdmin)
 admin.site.register(ArrivalWait, ArrivaWaitAdmin)
+admin.site.register(Catalog, CatalogAdmin)
