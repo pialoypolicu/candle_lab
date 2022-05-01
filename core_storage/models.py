@@ -16,7 +16,7 @@ class Purchase(models.Model):
     quantity = models.PositiveSmallIntegerField("Количество")
     weight = models.PositiveIntegerField("Вес, гр")
     price = models.FloatField("Цена")
-    catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, null=True)
+    catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, null=True, verbose_name="Каталожное название")
 
     def __str__(self):
         return self.name
