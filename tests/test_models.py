@@ -11,7 +11,6 @@ class CatalogModelTest(TestCase):
         cls.catalog_task = Catalog.objects.create(
             name='Воск wax',
         )
-        cls
 
     def test_verbose_name(self):
         """verbose_name в полях совпадает с ожидаемым."""

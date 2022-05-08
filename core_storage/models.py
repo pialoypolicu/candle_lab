@@ -38,13 +38,19 @@ class ArrivalWait(models.Model):
     created_date = models.DateTimeField("Дата создания записи", auto_now_add=True)
     quantity = models.PositiveSmallIntegerField("Количество")
     weight = models.PositiveIntegerField("Вес, гр")
+    catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, null=True, verbose_name="Каталожное название")
 
     def __str__(self):
         return self.name
 
 
 class Catalog(models.Model):
-    name = NameField("Название", max_length=256, db_index=True)
+    name = NameField("Название", max_length=256)
+    weight = models.PositiveIntegerField("Вес, гр")
+    company = NameField("Название поставщика", max_length=256)
+
+    class Meta:
+        unique_together = ("name", "weight", "company")
 
     def __str__(self):
         return self.name
