@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class NameField(models.CharField):
@@ -45,9 +46,22 @@ class ArrivalWait(models.Model):
 
 
 class Catalog(models.Model):
+    """Список материалов, который доступен для заказа"""
+    class CategoryChoice(models.TextChoices):
+        WAX = 'WAX', _('Wax')
+        PERFUME = 'PERF', _('Perfume')
+        WICK = "WICK", _("Wick")
+        NONE = 'NONE', _("None")
     name = NameField("Название", max_length=256)
     weight = models.PositiveIntegerField("Вес, гр")
     company = NameField("Название поставщика", max_length=256)
+    category = models.CharField(
+        max_length=4,
+        choices=CategoryChoice.choices,
+        default=CategoryChoice.NONE,
+        null=True,
+        verbose_name="Категория"
+    )
 
     class Meta:
         unique_together = ("name", "weight", "company")

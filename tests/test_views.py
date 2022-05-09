@@ -1,5 +1,5 @@
 from pprint import pprint
-from tests.constants import data_catalog
+from tests.constants import DATA_CATALOG, CATEGORIES
 from django.db import IntegrityError
 from django.test import TestCase
 from django.test.client import Client
@@ -12,7 +12,7 @@ class CatalogViewTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.my_client = Client()
-        for data in data_catalog:
+        for data in DATA_CATALOG:
             cls.my_client.post("/catalog/", data=data)
 
     def test_unique_catalog(self):
@@ -30,12 +30,21 @@ class CatalogViewTest(TestCase):
 
     def test_return_catalog_items(self):
         """Проверям, что выводим все записи из каталога
-           data_catalogв в данном списке, одна запись не валидна
+           data_catalog в данном списке, одна запись не валидна
         """
         response = self.my_client.get("/catalog/")
         total = len(response.data)
-        expected_rows = len(data_catalog) - 1
-        self.assertEqual(expected_rows, total, " Не верное колиество возвращаемое записей")
+        expected_rows = len(DATA_CATALOG) - 1
+        self.assertEqual(expected_rows, total, " Не верное возвращаемое количество записей")
+
+    def test_catalog_category(self):
+        """Проверяем, что  категория в объекте корректная"""
+        response = self.my_client.get("/catalog/")
+        data = response.data
+        for idx in range(len(data)):
+            category = data[idx]["category"]
+            with self.subTest(field="try_test"):
+                self.assertIn(category, CATEGORIES, "Категория не соответствует")
 
 
 class CreatePurchaseTest(TestCase):
@@ -43,7 +52,7 @@ class CreatePurchaseTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.my_client = Client()
-        cls.my_client.post("/catalog/", data=data_catalog[0])
+        cls.my_client.post("/catalog/", data=DATA_CATALOG[0])
         catalog_object = Catalog.objects.get(name="wax_1")
         data = {
             "name": "Natural wax",
