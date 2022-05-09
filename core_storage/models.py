@@ -12,15 +12,15 @@ class NameField(models.CharField):
 
 class Purchase(models.Model):
     """Закупка материала"""
-    name = NameField("Название", max_length=256)
+    catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, null=True, verbose_name="Каталожное название")
     date_purchase = models.DateField("День покупки")
     quantity = models.PositiveSmallIntegerField("Количество")
     weight = models.PositiveIntegerField("Вес, гр")
     price = models.FloatField("Цена")
-    catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, null=True, verbose_name="Каталожное название")
+    comments = models.CharField(max_length=256, null=True, verbose_name="комментарии")
 
     def __str__(self):
-        return self.name
+        return self.catalog_name.name
 
 
 class InStock(models.Model):
@@ -35,7 +35,7 @@ class InStock(models.Model):
 
 class ArrivalWait(models.Model):
     """Ожидание заказанного материала"""
-    name = NameField("Название", max_length=256)
+    # name = NameField("Название", max_length=256)
     created_date = models.DateTimeField("Дата создания записи", auto_now_add=True)
     quantity = models.PositiveSmallIntegerField("Количество")
     weight = models.PositiveIntegerField("Вес, гр")
@@ -53,7 +53,7 @@ class Catalog(models.Model):
         WICK = "WICK", _("Wick")
         NONE = 'NONE', _("None")
     name = NameField("Название", max_length=256)
-    weight = models.PositiveIntegerField("Вес, гр")
+    volume = models.PositiveIntegerField("Вес/кол-во, гр/шт")
     company = NameField("Название поставщика", max_length=256)
     category = models.CharField(
         max_length=4,
@@ -64,7 +64,7 @@ class Catalog(models.Model):
     )
 
     class Meta:
-        unique_together = ("name", "weight", "company")
+        unique_together = ("name", "volume", "company")
 
     def __str__(self):
         return self.name

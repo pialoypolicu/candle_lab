@@ -1,5 +1,5 @@
 from pprint import pprint
-
+from tests.constants import DATA_CATALOG
 from django.test import TestCase, Client
 from core_storage.models import Catalog, Purchase
 
@@ -8,18 +8,16 @@ class CatalogModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.catalog_task = Catalog.objects.create(
-            name='Воск wax',
-            weight=30,
-            company="greenwax",
-            category=Catalog.CategoryChoice("PERF")
-        )
+        cls.catalog_obj = Catalog.objects.create(**DATA_CATALOG[0])
 
     def test_verbose_name(self):
         """verbose_name в полях совпадает с ожидаемым."""
-        task = CatalogModelTest.catalog_task
+        task = self.catalog_obj
         field_verboses = {
             'name': 'Название',
+            "volume": "Вес/кол-во, гр/шт",
+            "company": "Название поставщика",
+            "category": "Категория"
         }
         for field, expected_value in field_verboses.items():
             with self.subTest(field=field):
@@ -28,7 +26,7 @@ class CatalogModelTest(TestCase):
 
     def test__str__text(self):
         """__str__ text в полях совпадает с ожидаемым."""
-        task = CatalogModelTest.catalog_task
+        task = self.catalog_obj
         expected_text = task.name
         self.assertEqual(expected_text, str(task))
 
@@ -53,31 +51,30 @@ class PurchaseModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        catalog_obj = Catalog.objects.create(
+        cls.catalog_obj = Catalog.objects.create(
             name="wosk",
-            weight=30,
+            volume=30,
             company="greenwax",
             category="WAX",
         )
         cls.purchase_task = Purchase.objects.create(
-            name="Воск wax",
+            catalog_name=cls.catalog_obj,
             date_purchase="2022-04-01",
             quantity=1,
             weight=30,
             price=1000,
-            catalog_name=catalog_obj
         )
 
     def test_verbose_name(self):
         """verbose_name в полях совпадает с ожидаемым."""
         task = PurchaseModelTest.purchase_task
         field_verboses = {
-            'name': 'Название',
+            'catalog_name': 'Каталожное название',
             "date_purchase": "День покупки",
             "quantity": "Количество",
             "weight": "Вес, гр",
             "price": "Цена",
-            "catalog_name": "Каталожное название",
+            "comments": "комментарии",
         }
         for field, expected_value in field_verboses.items():
             with self.subTest(field=field):
@@ -86,6 +83,6 @@ class PurchaseModelTest(TestCase):
 
     def test__str__text(self):
         """__str__ text в полях совпадает с ожидаемым."""
-        task = CatalogModelTest.catalog_task
-        expected_text = task.name
+        task = self.purchase_task
+        expected_text = task.catalog_name.name
         self.assertEqual(expected_text, str(task))

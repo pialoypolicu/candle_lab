@@ -17,9 +17,9 @@ def create_position_in_purchase(data):
 def create_or_update_arrival_wait(data):
     del data['date_purchase']
     del data['price']
-    name = data['name']
+    name = data['catalog_name_id']
     # TODO: сделать проверку на совпадение веса к имени
-    exist_object_in_arrival = ArrivalWait.objects.filter(name=name).exists()
+    exist_object_in_arrival = ArrivalWait.objects.filter(catalog_name=name).exists()
     if exist_object_in_arrival:
         quantity = data['quantity']
         arrival_object = ArrivalWait.objects.get(name=name)

@@ -15,7 +15,7 @@ class ArrivaWaitAdmin(admin.ModelAdmin):
 
 
 class CatalogAdmin(admin.ModelAdmin):
-    list_display = ["name", "weight", "company", "category"]
+    list_display = ["name", "volume", "company", "category"]
 
 
 admin.site.register(Purchase, PurchaseAdmin)

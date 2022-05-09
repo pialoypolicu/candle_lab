@@ -6,7 +6,6 @@ from django.test.client import Client
 from core_storage.models import Catalog, Purchase, ArrivalWait
 
 
-
 class CatalogViewTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -53,14 +52,13 @@ class CreatePurchaseTest(TestCase):
         super().setUpClass()
         cls.my_client = Client()
         cls.my_client.post("/catalog/", data=DATA_CATALOG[0])
-        catalog_object = Catalog.objects.get(name="wax_1")
+        cls.catalog_object = Catalog.objects.get(name="wax_1")
         data = {
-            "name": "Natural wax",
+            "catalog_name_id": cls.catalog_object.id,
             "date_purchase": "2022-04-01",
             "quantity": 1,
             "weight": 30,
             "price": 1000,
-            "catalog_name_id": catalog_object.id
         }
         cls.my_client.post(
             "/add-product/",
@@ -70,12 +68,12 @@ class CreatePurchaseTest(TestCase):
 
     def test_create_purchase(self):
         """Проверяем создание записи в Purchase"""
-        get_obj = Purchase.objects.get(name="Natural wax")
-        expected = "natural wax"
-        self.assertEqual(expected, get_obj.name)
+        get_obj = Purchase.objects.get(catalog_name=self.catalog_object.id)
+        expected = "wax_1"
+        self.assertEqual(expected, get_obj.catalog_name.name)
 
     def test_create_arrivalwait(self):
         """Проверяем создание записи в ArrivalAwait"""
-        arival_obj = ArrivalWait.objects.get(name="Natural wax")
-        expected = "natural wax"
-        self.assertEqual(expected, arival_obj.name)
+        arival_obj = ArrivalWait.objects.get(catalog_name=self.catalog_object.id)
+        expected = "wax_1"
+        self.assertEqual(expected, arival_obj.catalog_name.name)

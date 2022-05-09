@@ -1,18 +1,13 @@
 from django.test import TestCase, Client
 from core_storage.models import Catalog
+from tests.constants import DATA_CATALOG
 
 
 class StorageURLTests(TestCase):
     def setUp(self):
-        # Устанавливаем данные для тестирования
-        # Создаём экземпляр клиента. Он неавторизован.
         self.guest_client = Client()
-        self.catalog_row = Catalog.objects.create(
-            name="wosk"
-        )
+        self.guest_client.post("/catalog/", data=DATA_CATALOG[0])
 
     def test_catalog_page(self):
-        # Отправляем запрос через client,
-        # созданный в setUp()
         response = self.guest_client.get('/catalog/')
         self.assertEqual(response.status_code, 200)
