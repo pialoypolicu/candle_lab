@@ -5,31 +5,28 @@ from pprint import pprint
 from core_storage.models import Purchase, ArrivalWait, InStock
 
 
-def create_position_in_purchase(data):
-    try:
-         created_object = Purchase.objects.create(**data)
-    except TypeError as error:
-        print("Error in create_position", error)
-        return False
-    return created_object
-
-
 def create_or_update_arrival_wait(data):
     del data['date_purchase']
     del data['price']
-    name = data['catalog_name_id']
-    # TODO: сделать проверку на совпадение веса к имени
-    exist_object_in_arrival = ArrivalWait.objects.filter(catalog_name=name).exists()
+    name = data['catalog_name']
+    weight = data['weight']
+    exist_object_in_arrival = ArrivalWait.objects.filter(catalog_name=name, weight=weight).exists()
     if exist_object_in_arrival:
         quantity = data['quantity']
-        arrival_object = ArrivalWait.objects.get(name=name)
+        arrival_object = ArrivalWait.objects.filter(catalog_name=name, weight=weight)
+        if len(arrival_object) != 1:
+            return {
+                "result": "error",
+                "message": "arrival_wait_object is not 1"
+            }
         data |= {
-            "quantity": quantity + arrival_object.quantity,
+            "quantity": quantity + arrival_object.first().quantity,
         }
-        object = ArrivalWait.objects.filter(name=name).update(**data)
+        arrival_object.update(**data)
+        arrival_object = ArrivalWait.objects.filter(catalog_name=name, weight=weight).first()
     else:
-        object = ArrivalWait.objects.create(**data)
-    return object
+        arrival_object = ArrivalWait.objects.create(**data)
+    return {"result": arrival_object}
 
 
 def create_or_update_instock(data):

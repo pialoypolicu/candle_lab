@@ -1,25 +1,52 @@
+import json
+from pprint import pprint
 from django.forms import model_to_dict
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets, mixins
 from rest_framework.decorators import api_view
-from core_storage.models import Catalog
-from core_storage.serializers import CatalogSerializer
+from core_storage.models import Catalog, Purchase, ArrivalWait
+from core_storage.serializers import CatalogSerializer, PurchaseSerializer, ArrivalWaitSerializer
 
-from core_storage.core_storage_orm.orm_play import create_position_in_purchase, create_or_update_arrival_wait, create_or_update_instock, delete_or_update_arrival_wait
+from core_storage.core_storage_orm.orm_play import create_or_update_arrival_wait, create_or_update_instock, delete_or_update_arrival_wait
 
 
-class CreatePurchase(APIView):
-    def post(self, request):
-        data = request.data
-        created_object = create_position_in_purchase(data=data)
-        if created_object:
-            response = create_or_update_arrival_wait(data)
-        if response == 1:
-            response = model_to_dict(created_object)
-        else:
-            response = model_to_dict(response)
-        return Response({"message": response}, status=status.HTTP_200_OK)
+class CreateListViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet
+):
+    pass
+
+
+class PurchaseViewSet(CreateListViewSet):
+    queryset = Purchase.objects.all()
+    serializer_class = PurchaseSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer_purchase = self.get_serializer(data=request.data)
+        serializer_purchase.is_valid(raise_exception=True)
+        self.perform_create(serializer_purchase)
+        headers = self.get_success_headers(serializer_purchase.data)
+        result = create_or_update_arrival_wait(serializer_purchase.validated_data)
+        if result['result'] != "error":
+            serialized_arival_wait = model_to_dict(result['result'])
+            return Response(
+                [serializer_purchase.data, serialized_arival_wait],
+                status=status.HTTP_201_CREATED,
+                headers=headers,
+            )
+        return Response(
+            [serializer_purchase.data, result["message"]],
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
+
+
+class ArivalAwaitViewSet(CreateListViewSet):
+    queryset = ArrivalWait.objects.all()
+    serializer_class = ArrivalWaitSerializer
 
 
 class PinMaterial(APIView):

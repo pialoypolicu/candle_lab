@@ -12,7 +12,7 @@ class NameField(models.CharField):
 
 class Purchase(models.Model):
     """Закупка материала"""
-    catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, null=True, verbose_name="Каталожное название")
+    catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, verbose_name="Каталожное название")
     date_purchase = models.DateField("День покупки")
     quantity = models.PositiveSmallIntegerField("Количество")
     weight = models.PositiveIntegerField("Вес, гр")
@@ -35,14 +35,13 @@ class InStock(models.Model):
 
 class ArrivalWait(models.Model):
     """Ожидание заказанного материала"""
-    # name = NameField("Название", max_length=256)
     created_date = models.DateTimeField("Дата создания записи", auto_now_add=True)
     quantity = models.PositiveSmallIntegerField("Количество")
     weight = models.PositiveIntegerField("Вес, гр")
     catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, null=True, verbose_name="Каталожное название")
 
     def __str__(self):
-        return self.name
+        return self.catalog_name
 
 
 class Catalog(models.Model):

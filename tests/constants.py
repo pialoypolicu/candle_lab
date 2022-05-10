@@ -7,3 +7,12 @@ DATA_CATALOG =[
 ]
 
 CATEGORIES = ["PERF", "WAX",  "WICK", "NONE"]
+
+PURCHASE_DATA = {
+            "date_purchase": "2022-04-01",
+            "quantity": 1,
+            "weight": 30,
+            "price": 1000,
+        }
+
+TEN_ITERATIONS = 10
