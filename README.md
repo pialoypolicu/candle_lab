@@ -3,7 +3,6 @@ endpoints
 - catalog/
 - purchase/
 - pin-result/
-- arrival-instock/
 
 #### catalog/
 энд пойнт Для создания записей материала, который можно купить/заказать
@@ -15,18 +14,17 @@ post methhod создает новую запись в таблице
 Передаваемая data post запроса:
 
 - name: str
-- weight: int
+- volume: int
 - company: str
 
-example {"name": "wax", "weight": 30, "company": "black"}
+example {"name": "wax", "volume": 30, "company": "black"}
 
 #### purchase/
 Эндпойнт который регистрирует покупку материала, выдает историю закупок и можно выборочно по индексу выбирать закупку
 
-Сперва создаем запись в таблице закупки Purchase.
+при создании записи, по дефолту ставится статус в arrrival WAY - on the way
 
-Если запись создана успешно, то следующий шаг создаем запись в таблице ArrivalWait. 
-Таблица хранит в себе записи ождиаемых покупок
+С получением и отметкой о поступлении товара, статус arrival изменится на ARR - arrived
 
 get method:
 
@@ -40,8 +38,9 @@ purchase/
 - catalog_name: int
 - date_purchase: str
 - quantity: int
-- weight: int
+- volume: int
 - price: int
-- comments: str | None
+- comment: str | None
+- arrival: int
 
-example {"catalog_name": 1, "date_purchase": "2022-01-01", "quantity": 1, "weight": 30, "price": 777, "comments": "Hello"}
+example {"catalog_name": 1, "date_purchase": "2022-01-01", "quantity": 1, "volume": 30, "price": 777, "comments": "Hello", "arrival": 1}

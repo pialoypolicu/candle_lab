@@ -10,14 +10,28 @@ class NameField(models.CharField):
         return str(value).lower()
 
 
+class ArrivalChoice(models.TextChoices):
+    ARR = 'ARR', _('arrived')
+    WAY = 'WAY', _('on the way')
+    NONE = 'NONE', _("None")
+
+
 class Purchase(models.Model):
+    # TODO: упорядоченость по дате
     """Закупка материала"""
     catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, verbose_name="Каталожное название")
     date_purchase = models.DateField("День покупки")
     quantity = models.PositiveSmallIntegerField("Количество")
-    weight = models.PositiveIntegerField("Вес, гр")
+    volume = models.PositiveIntegerField("Вес/кол-во, гр/шт")
     price = models.FloatField("Цена")
-    comments = models.CharField(max_length=256, null=True, verbose_name="комментарии")
+    comment = models.CharField(max_length=256, null=True, verbose_name="комментарии")
+    arrival = models.CharField(
+        max_length=4,
+        choices=ArrivalChoice.choices,
+        default=ArrivalChoice.WAY,
+        null=True,
+        verbose_name="Статус прибытия"
+    )
 
     def __str__(self):
         return self.catalog_name.name
@@ -31,17 +45,6 @@ class InStock(models.Model):
 
     def __str__(self):
         return self.name
-
-
-class ArrivalWait(models.Model):
-    """Ожидание заказанного материала"""
-    created_date = models.DateTimeField("Дата создания записи", auto_now_add=True)
-    quantity = models.PositiveSmallIntegerField("Количество")
-    weight = models.PositiveIntegerField("Вес, гр")
-    catalog_name = models.ForeignKey("Catalog", on_delete=models.PROTECT, null=True, verbose_name="Каталожное название")
-
-    def __str__(self):
-        return self.catalog_name
 
 
 class Catalog(models.Model):

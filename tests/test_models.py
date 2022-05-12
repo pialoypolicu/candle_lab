@@ -2,6 +2,7 @@ from pprint import pprint
 from tests.constants import DATA_CATALOG
 from django.test import TestCase, Client
 from core_storage.models import Catalog, Purchase
+from tests.constants import PURCHASE_DATA
 
 
 class CatalogModelTest(TestCase):
@@ -51,6 +52,7 @@ class PurchaseModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.my_client = Client()
         cls.catalog_obj = Catalog.objects.create(
             name="wosk",
             volume=30,
@@ -61,8 +63,14 @@ class PurchaseModelTest(TestCase):
             catalog_name=cls.catalog_obj,
             date_purchase="2022-04-01",
             quantity=1,
-            weight=30,
+            volume=30,
             price=1000,
+        )
+        PURCHASE_DATA["catalog_name"] = cls.catalog_obj.id
+        cls.response = cls.my_client.post(
+            "/purchase/",
+            data=PURCHASE_DATA,
+            content_type='application/json',
         )
 
     def test_verbose_name(self):
@@ -72,9 +80,10 @@ class PurchaseModelTest(TestCase):
             'catalog_name': 'Каталожное название',
             "date_purchase": "День покупки",
             "quantity": "Количество",
-            "weight": "Вес, гр",
+            "volume": "Вес, гр",
             "price": "Цена",
-            "comments": "комментарии",
+            "comment": "комментарии",
+            "arrival": "Статус прибытия",
         }
         for field, expected_value in field_verboses.items():
             with self.subTest(field=field):
@@ -86,3 +95,10 @@ class PurchaseModelTest(TestCase):
         task = self.purchase_task
         expected_text = task.catalog_name.name
         self.assertEqual(expected_text, str(task))
+
+    def test_arrival(self):
+        task = self.purchase_task
+        expected = "WAY"
+        arrival = task.arrival
+        self.assertEqual(expected, arrival, "статус доставки не сопадает")
+

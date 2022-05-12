@@ -1,9 +1,8 @@
 from pprint import pprint
 from tests.constants import DATA_CATALOG, CATEGORIES, PURCHASE_DATA, TEN_ITERATIONS
-from django.db import IntegrityError
 from django.test import TestCase
 from django.test.client import Client
-from core_storage.models import Catalog, Purchase, ArrivalWait
+from core_storage.models import Catalog, Purchase
 
 
 class CatalogViewTest(TestCase):
@@ -79,19 +78,11 @@ class CreatePurchaseTest(TestCase):
         purchase_response = self.my_client.get("/purchase/")
         purchase_id = purchase_response.data[-1].get('id')
         purchase_id_response = self.my_client.get(f"/purchase/{purchase_id}/")
-        expected = self.catalog_object.name
-        catalog_name = purchase_id_response.data.get('catalog_name')
+        purchase_id_data = purchase_id_response.data
+        catalog_name = purchase_id_data.get('catalog_name')
+        comment = purchase_id_data.get("comment")
         get_read_catalog_name = Catalog.objects.get(id=catalog_name).name
+        expected = self.catalog_object.name
         self.assertEqual(expected, get_read_catalog_name, "Не выводит элемент по индексу")
-
-    def test_create_arrivalwait(self):
-        """Проверяем создание записи в ArrivalAwait"""
-        arival_obj = ArrivalWait.objects.get(catalog_name=self.catalog_object.id)
-        expected = "wax_1"
-        self.assertEqual(expected, arival_obj.catalog_name.name, "Запись в arrivalwait не создана")
-
-    def test_calculate_arrivalwait(self):
-        """Проверка суммирования одинаковых заказов в ArrivalAwait"""
-        arival_quantity = ArrivalWait.objects.get(catalog_name=self.catalog_object.id).quantity
-        expected = TEN_ITERATIONS
-        self.assertEqual(expected, arival_quantity, "Не правильно суммируются заказы")
+        expected_comment = "Very good candles"
+        self.assertEqual(expected_comment, comment, "Комментарий  не  соответствует")
