@@ -3,6 +3,7 @@ from tests.constants import DATA_CATALOG, CATEGORIES, PURCHASE_DATA, TEN_ITERATI
 from django.test import TestCase
 from django.test.client import Client
 from core_storage.models import Catalog, Purchase
+from http import HTTPStatus
 
 
 class CatalogViewTest(TestCase):
@@ -21,7 +22,7 @@ class CatalogViewTest(TestCase):
 
 
     def test_create_row_catalog(self):
-        """Прроверяем создание записи, с частичными совпадениями"""
+        """Проверяем создание записи, с частичными совпадениями"""
         total = Catalog.objects.filter(name="wax_2").count()
         expected = total >= 3
         self.assertTrue(expected, "Не была создана отличная запись")
@@ -79,10 +80,34 @@ class CreatePurchaseTest(TestCase):
         purchase_id = purchase_response.data[-1].get('id')
         purchase_id_response = self.my_client.get(f"/purchase/{purchase_id}/")
         purchase_id_data = purchase_id_response.data
-        catalog_name = purchase_id_data.get('catalog_name')
         comment = purchase_id_data.get("comment")
-        get_read_catalog_name = Catalog.objects.get(id=catalog_name).name
+        get_read_catalog_name = Catalog.objects.get(id=self.catalog_object.id).name
         expected = self.catalog_object.name
         self.assertEqual(expected, get_read_catalog_name, "Не выводит элемент по индексу")
         expected_comment = "Very good candles"
         self.assertEqual(expected_comment, comment, "Комментарий  не  соответствует")
+
+    def test_put_purchase(self):
+        """Проверим будет ли выполнено изменение на методе PUT"""
+        purchase_id = self.my_client.get("/purchase/").data[-1].get('id')
+        data = {"quantity": 3}
+        purchase_id_response = self.my_client.put(f"/purchase/{purchase_id}/", data=data)
+        expected = HTTPStatus.METHOD_NOT_ALLOWED
+        self.assertEqual(expected, purchase_id_response.status_code, "Статус ответа не совпаадает с ожидаемым")
+
+
+class ArrivalTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.my_client = Client()
+
+        cls.my_client.post("/arrival/")
+        cls.catalog_object = Catalog.objects.get(name="wax_1")
+        PURCHASE_DATA["catalog_name"] = cls.catalog_object.id
+        for i in range(TEN_ITERATIONS):
+            cls.my_client.post(
+                "/purchase/",
+                data=PURCHASE_DATA,
+                content_type='application/json'
+            )

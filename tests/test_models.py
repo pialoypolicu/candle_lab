@@ -80,7 +80,7 @@ class PurchaseModelTest(TestCase):
             'catalog_name': 'Каталожное название',
             "date_purchase": "День покупки",
             "quantity": "Количество",
-            "volume": "Вес, гр",
+            "volume": "Вес/кол-во, гр/шт",
             "price": "Цена",
             "comment": "комментарии",
             "arrival": "Статус прибытия",
