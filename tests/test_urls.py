@@ -27,4 +27,24 @@ class ArrivalURLTests(TestCase):
         data["name"] = self.purchase_obj.data.get("id")
         data["volume"] = self.purchase_obj.data.get("volume")
         response = self.guest_client.post('/arrival/', data=data)
-        self.assertEqual(response.status_code, HTTPStatus.CREATED, "Статус ответа не соответсвует")
+        self.assertEqual(response.status_code, HTTPStatus.CREATED, "Статус ответа не соответствует")
+
+
+class InStockURLTests(TestCase):
+    def setUp(self):
+        self.guest_client = Client()
+#         self.cat_obj = self.guest_client.post("/catalog/", data=DATA_CATALOG[0])
+#         PURCHASE_DATA["catalog_name"] = self.cat_obj.data.get("id")
+#         self.purchase_obj = self.guest_client.post("/purchase/", data=PURCHASE_DATA)
+#         data = {}
+#         data["name"] = self.purchase_obj.data.get("id")
+#         data["volume"] = self.purchase_obj.data.get("volume")
+#         self.guest_client.post('/arrival/', data=data)
+        self.response = self.guest_client.get("/instock/")
+#
+    def test_arrival_page(self):
+        """Проверка возвращаемого ответа 200 при запросе списка InStock"""
+        expected = HTTPStatus.OK
+        self.assertEqual(self.response.status_code, expected, "Статус ответа не соответствует")
+
+    # def test_destroy(self):

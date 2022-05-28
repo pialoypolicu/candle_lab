@@ -19,6 +19,13 @@ class CreateRetrieveListViewSet(
 ):
     pass
 
+
+class ListViewSet(
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet
+):
+    pass
+
 class CreateUpdateDestroyViewSet(
     mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
@@ -38,6 +45,11 @@ class PurchaseViewSet(CreateRetrieveListViewSet):
     serializer_class = PurchaseSerializer
 
 
-class InStockViewSet(CreateUpdateDestroyViewSet):
+class InStockViewSet(ListViewSet):
+    queryset = InStock.objects.all()
+    serializer_class = InStockSerializer
+
+
+class ArrivalViewSet(CreateUpdateDestroyViewSet):
     queryset = InStock.objects.all()
     serializer_class = InStockSerializer

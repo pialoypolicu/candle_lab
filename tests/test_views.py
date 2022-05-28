@@ -28,7 +28,7 @@ class CatalogViewTest(TestCase):
         self.assertTrue(expected, "Не была создана отличная запись")
 
     def test_return_catalog_items(self):
-        """Проверям, что выводим все записи из каталога
+        """Проверяем, что выводим все записи из каталога
            data_catalog в данном списке, одна запись не валидна
         """
         response = self.my_client.get("/catalog/")
@@ -101,13 +101,21 @@ class ArrivalTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.my_client = Client()
+        cls.cat_obj = cls.my_client.post("/catalog/", data=DATA_CATALOG[0])
+        PURCHASE_DATA["catalog_name"] = cls.cat_obj.data.get("id")
+        cls.purchase_obj = cls.my_client.post("/purchase/", data=PURCHASE_DATA)
+        cls.purchase_obj_id = cls.purchase_obj.data.get("id")
 
-        cls.my_client.post("/arrival/")
-        cls.catalog_object = Catalog.objects.get(name="wax_1")
-        PURCHASE_DATA["catalog_name"] = cls.catalog_object.id
-        for i in range(TEN_ITERATIONS):
-            cls.my_client.post(
-                "/purchase/",
-                data=PURCHASE_DATA,
-                content_type='application/json'
-            )
+    def test_create_object_in_stock(self):
+        """Проверяем создание записи в таблице InStock"""
+        data = self.my_client.get(f"/purchase/{self.purchase_obj_id}/")
+        data_to_instock = {
+            "name": data.data["catalog_name"],
+            "volume": data.data["volume"]
+        }
+        self.my_client.post("/arrival/", data=data_to_instock)
+        instock_object = self.my_client.get("/instock/")
+        for field, expected_value in data_to_instock.items():
+            with self.subTest(field=field):
+                self.assertEqual(
+                    instock_object.data[0].get(field), expected_value)
