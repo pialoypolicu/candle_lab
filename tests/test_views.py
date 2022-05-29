@@ -1,3 +1,4 @@
+import time
 from pprint import pprint
 from tests.constants import DATA_CATALOG, CATEGORIES, PURCHASE_DATA, TEN_ITERATIONS
 from django.test import TestCase
@@ -105,17 +106,32 @@ class ArrivalTest(TestCase):
         PURCHASE_DATA["catalog_name"] = cls.cat_obj.data.get("id")
         cls.purchase_obj = cls.my_client.post("/purchase/", data=PURCHASE_DATA)
         cls.purchase_obj_id = cls.purchase_obj.data.get("id")
+        response_purchase = cls.my_client.get(f"/purchase/{cls.purchase_obj_id}/")
+        cls.data_to_instock = {
+            "name": response_purchase.data["catalog_name"],
+            "volume": response_purchase.data["volume"]
+        }
+        cls.my_client.post("/arrival/", data=cls.data_to_instock)
 
     def test_create_object_in_stock(self):
         """Проверяем создание записи в таблице InStock"""
-        data = self.my_client.get(f"/purchase/{self.purchase_obj_id}/")
-        data_to_instock = {
-            "name": data.data["catalog_name"],
-            "volume": data.data["volume"]
-        }
-        self.my_client.post("/arrival/", data=data_to_instock)
         instock_object = self.my_client.get("/instock/")
-        for field, expected_value in data_to_instock.items():
+        for field, expected_value in self.data_to_instock.items():
             with self.subTest(field=field):
                 self.assertEqual(
-                    instock_object.data[0].get(field), expected_value)
+                    instock_object.data[0].get(field), expected_value, "Запись в таблице instock не создана")
+
+    def test_unique_object_instock(self):
+        """Проверка, что вторая запись с таким же названием в InStoc не создается"""
+        response = self.my_client.get("/instock/")
+        expected_objects = len(response.data)
+        self.my_client.post("/arrival/", data=self.data_to_instock)
+        total_objects_instock = len(self.my_client.get("/instock/").data)
+        self.assertEqual(total_objects_instock, expected_objects, "создана не уникальная запись в instock")
+
+    def test_update_object_instock(self):
+        """Проверка изменения сушествующего объекта"""
+        self.my_client.post("/arrival/", data=self.data_to_instock)
+        expected_objects = 60
+        total_object_volume = self.my_client.get("/instock/").data[0]["volume"]
+        self.assertEqual(total_object_volume, expected_objects, "Запись в InStock не обновлена")
