@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 import os
+from candle_lab import variables
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -32,6 +33,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '[::1]',
     'testserver',
+    '0.0.0.0',
 ]
 
 
@@ -85,12 +87,12 @@ WSGI_APPLICATION = 'candle_lab.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('POSTGRES_USER'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT')
+        'ENGINE': variables.DB_ENGINE,
+        'NAME': variables.POSTGRES_DB,
+        'USER': variables.POSTGRES_USER,
+        'PASSWORD': variables.POSTGRES_PASSWORD,
+        'HOST': variables.DB_HOST,
+        'PORT': variables.DB_PORT
     }
 }
 
