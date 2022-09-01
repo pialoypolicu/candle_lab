@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status, viewsets, mixins
 from core_storage.models import Catalog, Purchase, InStock
 from core_storage.serializers import CatalogSerializer, PurchaseSerializer, InStockSerializer
-from rest_framework.decorators import action
+
 
 class CreateRetrieveListViewSet(
     mixins.CreateModelMixin,
