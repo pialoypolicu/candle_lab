@@ -4,7 +4,7 @@ from core_storage.models import Catalog, Purchase, InStock
 
 
 class CatalogSerializer(serializers.ModelSerializer):
-    catalog_name = serializers.StringRelatedField(many=True, required=False)
+    # catalog_name = serializers.StringRelatedField(many=True, required=False)
     class Meta:
         model = Catalog
         fields = ("__all__")

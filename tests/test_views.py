@@ -1,4 +1,5 @@
-import time
+import json
+import random
 from pprint import pprint
 from tests.constants import DATA_CATALOG, CATEGORIES, PURCHASE_DATA, TEN_ITERATIONS
 from django.test import TestCase
@@ -7,13 +8,16 @@ from core_storage.models import Catalog, Purchase
 from http import HTTPStatus
 
 
+class Client:
+    my_client = Client()
+
+
 class CatalogViewTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.my_client = Client()
         for data in DATA_CATALOG:
-            cls.my_client.post("/catalog/", data=data)
+            Client.my_client.post("/catalog/", data=data)
 
     def test_unique_catalog(self):
         """Проверка на уникальность при создании записи"""
@@ -32,14 +36,22 @@ class CatalogViewTest(TestCase):
         """Проверяем, что выводим все записи из каталога
            data_catalog в данном списке, одна запись не валидна
         """
-        response = self.my_client.get("/catalog/")
+        response = Client.my_client.get("/catalog/")
         total = len(response.data)
         expected_rows = len(DATA_CATALOG) - 1
         self.assertEqual(expected_rows, total, " Не верное возвращаемое количество записей")
 
+    def test_retrieve_catalog_item(self):
+        """
+        Проверяем retrieve метод. Возвращение правильного объекта по id.
+        """
+        response = Client.my_client.get("/catalog/6/")
+        expected_id = 6
+        self.assertEqual(expected_id, response.data['id'], "Вернулся не верный объект")
+
     def test_catalog_category(self):
         """Проверяем, что  категория в объекте корректная"""
-        response = self.my_client.get("/catalog/")
+        response = Client.my_client.get("/catalog/")
         data = response.data
         for idx in range(len(data)):
             category = data[idx]["category"]
@@ -51,12 +63,11 @@ class CreatePurchaseTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.my_client = Client()
-        cls.my_client.post("/catalog/", data=DATA_CATALOG[0])
+        Client.my_client.post("/catalog/", data=DATA_CATALOG[0])
         cls.catalog_object = Catalog.objects.get(name="wax_1")
         PURCHASE_DATA["catalog_name"] = cls.catalog_object.id
         for i in range(TEN_ITERATIONS):
-            cls.my_client.post(
+            Client.my_client.post(
                 "/purchase/",
                 data=PURCHASE_DATA,
                 content_type='application/json'
@@ -70,16 +81,16 @@ class CreatePurchaseTest(TestCase):
 
     def test_list_purchase_viewset(self):
         """Вывод всех записей."""
-        response = self.my_client.get("/purchase/")
+        response = Client.my_client.get("/purchase/")
         expected = TEN_ITERATIONS
         total_row = len(response.data)
         self.assertEqual(total_row, expected, "Выводимое количество покупок, не соответствует")
 
     def test_retrieve_purchase(self):
         """Проверяем выдается ли запись по индексу"""
-        purchase_response = self.my_client.get("/purchase/")
+        purchase_response = Client.my_client.get("/purchase/")
         purchase_id = purchase_response.data[-1].get('id')
-        purchase_id_response = self.my_client.get(f"/purchase/{purchase_id}/")
+        purchase_id_response = Client.my_client.get(f"/purchase/{purchase_id}/")
         purchase_id_data = purchase_id_response.data
         comment = purchase_id_data.get("comment")
         get_read_catalog_name = Catalog.objects.get(id=self.catalog_object.id).name
@@ -90,32 +101,32 @@ class CreatePurchaseTest(TestCase):
 
     def test_put_purchase(self):
         """Проверим будет ли выполнено изменение на методе PUT"""
-        purchase_id = self.my_client.get("/purchase/").data[-1].get('id')
+        purchase_id = Client.my_client.get("/purchase/").data[-1].get('id')
         data = {"quantity": 3}
-        purchase_id_response = self.my_client.put(f"/purchase/{purchase_id}/", data=data)
+        purchase_id_response = Client.my_client.put(f"/purchase/{purchase_id}/", data=data)
         expected = HTTPStatus.METHOD_NOT_ALLOWED
         self.assertEqual(expected, purchase_id_response.status_code, "Статус ответа не совпаадает с ожидаемым")
 
 
-class ArrivalTest(TestCase):
+class ArrivalInstockTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.my_client = Client()
-        cls.cat_obj = cls.my_client.post("/catalog/", data=DATA_CATALOG[0])
+        cls.cat_obj = Client.my_client.post("/catalog/", data=DATA_CATALOG[0])
         PURCHASE_DATA["catalog_name"] = cls.cat_obj.data.get("id")
-        cls.purchase_obj = cls.my_client.post("/purchase/", data=PURCHASE_DATA)
+        cls.purchase_obj = Client.my_client.post("/purchase/", data=PURCHASE_DATA)
         cls.purchase_obj_id = cls.purchase_obj.data.get("id")
-        response_purchase = cls.my_client.get(f"/purchase/{cls.purchase_obj_id}/")
+        response_purchase = Client.my_client.get(f"/purchase/{cls.purchase_obj_id}/")
         cls.data_to_instock = {
             "name": response_purchase.data["catalog_name"],
-            "volume": response_purchase.data["volume"]
+            "volume": response_purchase.data["volume"],
+            "availability": True
         }
-        cls.my_client.post("/arrival/", data=cls.data_to_instock)
+        cls.arrival_response = Client.my_client.post("/arrival/", data=cls.data_to_instock)
 
     def test_create_object_in_stock(self):
         """Проверяем создание записи в таблице InStock"""
-        instock_object = self.my_client.get("/instock/")
+        instock_object = Client.my_client.get("/instock/")
         for field, expected_value in self.data_to_instock.items():
             with self.subTest(field=field):
                 self.assertEqual(
@@ -123,15 +134,51 @@ class ArrivalTest(TestCase):
 
     def test_unique_object_instock(self):
         """Проверка, что вторая запись с таким же названием в InStoc не создается"""
-        response = self.my_client.get("/instock/")
+        response = Client.my_client.get("/instock/")
         expected_objects = len(response.data)
-        self.my_client.post("/arrival/", data=self.data_to_instock)
-        total_objects_instock = len(self.my_client.get("/instock/").data)
+        Client.my_client.post("/arrival/", data=self.data_to_instock)
+        total_objects_instock = len(Client.my_client.get("/instock/").data)
         self.assertEqual(total_objects_instock, expected_objects, "создана не уникальная запись в instock")
 
     def test_update_object_instock(self):
         """Проверка изменения сушествующего объекта"""
-        self.my_client.post("/arrival/", data=self.data_to_instock)
+        Client.my_client.post("/arrival/", data=self.data_to_instock)
         expected_objects = 60
-        total_object_volume = self.my_client.get("/instock/").data[0]["volume"]
+        total_object_volume = Client.my_client.get("/instock/").data[0]["volume"]
         self.assertEqual(total_object_volume, expected_objects, "Запись в InStock не обновлена")
+
+    def test_retrieve_instock(self):
+        """
+             Проверяем retrieve метод. Возвращение правильного объекта по id.
+        """
+        arrival_id = self.arrival_response.data["id"]
+        response = Client.my_client.get(f"/instock/{arrival_id}/")
+        expected_id = 2
+        self.assertEqual(expected_id, response.data['id'], "Вернулся не верный объект")
+
+
+class ProductionTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.cat_obj = Client.my_client.post("/catalog/", data=DATA_CATALOG[0])
+        PURCHASE_DATA["catalog_name"] = cls.cat_obj.data.get("id")
+        cls.purchase_obj = Client.my_client.post("/purchase/", data=PURCHASE_DATA)
+        cls.purchase_obj_id = cls.purchase_obj.data.get("id")
+        response_purchase = Client.my_client.get(f"/purchase/{cls.purchase_obj_id}/")
+        cls.data_to_instock = {
+            "name": response_purchase.data["catalog_name"],
+            "volume": response_purchase.data["volume"],
+            "availability": True,
+        }
+        cls.response = Client.my_client.post("/arrival/", data=cls.data_to_instock)
+
+
+    def test_update_pruduction(self):
+        """Проверка изменения volume"""
+        expected = 20
+        id = self.response.data['id']
+        Client.my_client.patch(f"/production/{id}/", data={"volume": 10}, content_type="application/json")
+        response = Client.my_client.get("/instock/1/")
+        self.assertEqual(expected, response.data["volume"], "Некорректное изменение записи в Instock")
+        # TODO: удаление записи

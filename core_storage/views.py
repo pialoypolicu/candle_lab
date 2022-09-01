@@ -1,8 +1,9 @@
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import status, viewsets, mixins
 from core_storage.models import Catalog, Purchase, InStock
 from core_storage.serializers import CatalogSerializer, PurchaseSerializer, InStockSerializer
-
+from rest_framework.decorators import action
 
 class CreateRetrieveListViewSet(
     mixins.CreateModelMixin,
@@ -13,14 +14,14 @@ class CreateRetrieveListViewSet(
     pass
 
 
-class ListViewSet(
+class ListRetrieveViewSet(
     mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
     viewsets.GenericViewSet
 ):
     pass
 
-class CreateUpdateDestroyViewSet(
-    mixins.CreateModelMixin,
+class UpdateDestroyViewSet(
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet
@@ -38,7 +39,7 @@ class PurchaseViewSet(CreateRetrieveListViewSet):
     serializer_class = PurchaseSerializer
 
 
-class InStockViewSet(ListViewSet):
+class InStockViewSet(ListRetrieveViewSet):
     queryset = InStock.objects.all()
     serializer_class = InStockSerializer
 
@@ -60,6 +61,12 @@ class ArrivalViewSet(viewsets.ViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ProductionViewSet(ListViewSet):
+class ProductionViewSet(UpdateDestroyViewSet):
     queryset = InStock.objects.all()
     serializer_class = InStockSerializer
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        obj = get_object_or_404(self.queryset, pk=kwargs['pk'])
+        request.data["volume"] = obj.volume - request.data["volume"]
+        return self.update(request, *args, **kwargs)

@@ -2,6 +2,13 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+class CategoryChoice(models.TextChoices):
+    WAX = 'WAX', _('Wax')
+    PERFUME = 'PERF', _('Perfume')
+    WICK = "WICK", _("Wick")
+    NONE = 'NONE', _("None")
+
+
 class NameField(models.CharField):
     def __init__(self, *args, **kwargs):
         super(NameField, self).__init__(*args, **kwargs)
@@ -46,6 +53,7 @@ class InStock(models.Model):
     """На складе"""
     name = NameField("Название", max_length=256, unique=True)
     volume = models.PositiveIntegerField("Вес/кол-во, гр/шт")
+    availability = models.BooleanField("Наличие", blank=True, null=True)
     update_date = models.DateTimeField("Дата обновления", auto_now=True)
 
 
@@ -55,11 +63,6 @@ class InStock(models.Model):
 
 class Catalog(models.Model):
     """Список материалов, который доступен для заказа"""
-    class CategoryChoice(models.TextChoices):
-        WAX = 'WAX', _('Wax')
-        PERFUME = 'PERF', _('Perfume')
-        WICK = "WICK", _("Wick")
-        NONE = 'NONE', _("None")
     name = NameField("Название", max_length=256)
     volume = models.PositiveIntegerField("Вес/кол-во, гр/шт")
     company = NameField("Название поставщика", max_length=256)

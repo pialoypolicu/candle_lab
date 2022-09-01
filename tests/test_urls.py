@@ -47,4 +47,17 @@ class InStockURLTests(TestCase):
         expected = HTTPStatus.OK
         self.assertEqual(self.response.status_code, expected, "Статус ответа не соответствует")
 
-    # def test_destroy(self):
+
+# class ProductionURLTests(TestCase):
+#     def setUp(self):
+#         self.guest_client = Client()
+#         self.response = self.guest_client.put("/production/")
+#
+#
+#     def test_smoke(self):
+#         """Проверка smoke test production"""
+#         expected = HTTPStatus.OK
+#         print(dir(self.response))
+#         print("content", self.response.content)
+#         print("context", self.response.context)
+#         self.assertEqual(self.response.status_code, expected, "Статус ответа не соответствует")
