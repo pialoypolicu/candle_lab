@@ -172,13 +172,23 @@ class ProductionTest(TestCase):
             "availability": True,
         }
         cls.response = Client.my_client.post("/arrival/", data=cls.data_to_instock)
+        cls.data_update = {"volume": 7}
+        cls.id = cls.response.data['id']
 
 
-    def test_update_pruduction(self):
+    def test_partial_update_pruduction(self):
         """Проверка изменения volume"""
-        expected = 20
-        id = self.response.data['id']
-        Client.my_client.patch(f"/production/{id}/", data={"volume": 10}, content_type="application/json")
-        response = Client.my_client.get("/instock/1/")
-        self.assertEqual(expected, response.data["volume"], "Некорректное изменение записи в Instock")
+        expected = 23
+        Client.my_client.patch(f"/production/{self.id}/", data=self.data_update, content_type="application/json")
+        response = Client.my_client.get(f"/instock/{self.id}/")
+        self.assertEqual(expected, response.data["volume"], "Некорректно выполнен partial upd записи в Instock")
         # TODO: удаление записи
+
+
+    def test_update_production(self):
+        """Проверяем update записи"""
+        expected = 7
+        Client.my_client.put(f"/production/{self.id}/", data=self.data_update, content_type="application/json")
+        response = Client.my_client.get(f"/instock/{self.id}/")
+        self.assertEqual(expected, response.data["volume"], "Некорректно выполнен update записи в Instock")
+

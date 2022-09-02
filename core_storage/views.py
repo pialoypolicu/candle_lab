@@ -5,6 +5,17 @@ from core_storage.models import Catalog, Purchase, InStock
 from core_storage.serializers import CatalogSerializer, PurchaseSerializer, InStockSerializer
 
 
+class EnablePartialUpdateMixin:
+    """Enable partial updates
+
+    Override partial kwargs in UpdateModelMixin class
+    https://github.com/encode/django-rest-framework/blob/91916a4db14cd6a06aca13fb9a46fc667f6c0682/rest_framework/mixins.py#L64
+    """
+    def update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return super().update(request, *args, **kwargs)
+
+
 class CreateRetrieveListViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
@@ -61,7 +72,9 @@ class ArrivalViewSet(viewsets.ViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ProductionViewSet(UpdateDestroyViewSet):
+
+class ProductionViewSet(EnablePartialUpdateMixin, UpdateDestroyViewSet):
+    # TODO установить пермишены. метод update для супер юзера, partial для всех зареганных
     queryset = InStock.objects.all()
     serializer_class = InStockSerializer
 
