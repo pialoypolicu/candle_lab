@@ -9,11 +9,13 @@ DATA_CATALOG =[
 CATEGORIES = ["PERF", "WAX",  "WICK", "NONE"]
 
 PURCHASE_DATA = {
+            "name": "wax_1",
+            "volume": 30,
+            "company": "black",
             "date_purchase": "2022-04-01",
             "quantity": 1,
-            "volume": 30,
             "price": 1000,
-            "comment": "Very good candles"
+            "comment": "Very good candles",
         }
 
 TEN_ITERATIONS = 10

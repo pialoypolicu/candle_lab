@@ -16,8 +16,12 @@ class CatalogViewTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.my_client = Client.my_client
         for data in DATA_CATALOG:
-            Client.my_client.post("/catalog/", data=data)
+            cls.my_client.post("/catalog/", data=data)
+        cls.catalog_list = cls.my_client.get("/catalog/")
+        cls.catalog_obj = random.choice(cls.catalog_list.data)
+
 
     def test_unique_catalog(self):
         """Проверка на уникальность при создании записи"""
@@ -36,8 +40,7 @@ class CatalogViewTest(TestCase):
         """Проверяем, что выводим все записи из каталога
            data_catalog в данном списке, одна запись не валидна
         """
-        response = Client.my_client.get("/catalog/")
-        total = len(response.data)
+        total = len(self.catalog_list.data)
         expected_rows = len(DATA_CATALOG) - 1
         self.assertEqual(expected_rows, total, " Не верное возвращаемое количество записей")
 
@@ -45,59 +48,56 @@ class CatalogViewTest(TestCase):
         """
         Проверяем retrieve метод. Возвращение правильного объекта по id.
         """
-        response = Client.my_client.get("/catalog/6/")
-        expected_id = 6
-        self.assertEqual(expected_id, response.data['id'], "Вернулся не верный объект")
+        catalog_obj_id = self.catalog_obj.get("id")
+        response = self.my_client.get(f"/catalog/{catalog_obj_id}/")
+        self.assertEqual(catalog_obj_id, response.data['id'], "Вернулся не верный объект")
 
     def test_catalog_category(self):
         """Проверяем, что  категория в объекте корректная"""
-        response = Client.my_client.get("/catalog/")
-        data = response.data
+        data = self.catalog_list.data
         for idx in range(len(data)):
             category = data[idx]["category"]
             with self.subTest(field="try_test"):
                 self.assertIn(category, CATEGORIES, "Категория не соответствует")
 
 
-class CreatePurchaseTest(TestCase):
+class PurchaseTest(TestCase):
+    my_client = Client.my_client
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        Client.my_client.post("/catalog/", data=DATA_CATALOG[0])
-        cls.catalog_object = Catalog.objects.get(name="wax_1")
-        PURCHASE_DATA["catalog_name"] = cls.catalog_object.id
-        for i in range(TEN_ITERATIONS):
-            Client.my_client.post(
+
+        cls.response_catalog = cls.my_client.post("/catalog/", data=DATA_CATALOG[0])
+        for i in range(10):
+            cls.my_client.post(
                 "/purchase/",
                 data=PURCHASE_DATA,
                 content_type='application/json'
             )
+        cls.purchases = cls.my_client.get("/purchase/")
 
     def test_create_purchase(self):
         """Проверяем создание записи в Purchase"""
-        get_obj = Purchase.objects.filter(catalog_name=self.catalog_object.id).first()
+        get_obj = Purchase.objects.get(id=self.purchases.data[0]["id"])
         expected = "wax_1"
         self.assertEqual(expected, get_obj.catalog_name.name)
 
     def test_list_purchase_viewset(self):
         """Вывод всех записей."""
-        response = Client.my_client.get("/purchase/")
         expected = TEN_ITERATIONS
-        total_row = len(response.data)
+        total_row = len(self.purchases.data)
         self.assertEqual(total_row, expected, "Выводимое количество покупок, не соответствует")
 
     def test_retrieve_purchase(self):
         """Проверяем выдается ли запись по индексу"""
-        purchase_response = Client.my_client.get("/purchase/")
-        purchase_id = purchase_response.data[-1].get('id')
+        expected_name = self.response_catalog.data.get("name")
+        purchase_id = random.choice(self.purchases.data).get('id')
         purchase_id_response = Client.my_client.get(f"/purchase/{purchase_id}/")
         purchase_id_data = purchase_id_response.data
-        comment = purchase_id_data.get("comment")
-        get_read_catalog_name = Catalog.objects.get(id=self.catalog_object.id).name
-        expected = self.catalog_object.name
-        self.assertEqual(expected, get_read_catalog_name, "Не выводит элемент по индексу")
-        expected_comment = "Very good candles"
-        self.assertEqual(expected_comment, comment, "Комментарий  не  соответствует")
+        purchase_comment = purchase_id_data.get("comment")
+        purchase_name = purchase_id_data.get("name")
+        self.assertEqual(expected_name, purchase_name, "Не выводит элемент по индексу")
 
     def test_put_purchase(self):
         """Проверим будет ли выполнено изменение на методе PUT"""
@@ -106,6 +106,17 @@ class CreatePurchaseTest(TestCase):
         purchase_id_response = Client.my_client.put(f"/purchase/{purchase_id}/", data=data)
         expected = HTTPStatus.METHOD_NOT_ALLOWED
         self.assertEqual(expected, purchase_id_response.status_code, "Статус ответа не совпаадает с ожидаемым")
+
+    def test_raise_parse_error(self):
+        PURCHASE_DATA["name"] = "wax_2"
+        response = self.my_client.post(
+            "/purchase/",
+            data=PURCHASE_DATA,
+            content_type='application/json'
+        )
+        expected_text_error = f'object - {PURCHASE_DATA["name"]} not exists'
+        response_text = json.loads(response.content)["detail"]
+        self.assertEqual(expected_text_error, response_text, "Текст ошибки не совпадает")
 
 
 class ArrivalInstockTest(TestCase):

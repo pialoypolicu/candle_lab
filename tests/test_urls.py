@@ -13,12 +13,22 @@ class StorageURLTests(TestCase):
         response = self.guest_client.get('/catalog/')
         self.assertEqual(response.status_code, 200)
 
+class PurchaseURLTests(TestCase):
+    def setUp(self):
+        self.guest_client = Client()
+        self.response = self.guest_client.post("/purchase/", data=PURCHASE_DATA)
+
+    def test_404_error(self):
+        """Проверка 404 ошибки если запись не создана в Catalog"""
+        self.assertEqual(HTTPStatus.NOT_FOUND, self.response.status_code, "Ответ != 404")
+
 
 class ArrivalURLTests(TestCase):
     def setUp(self):
         self.guest_client = Client()
         self.cat_obj = self.guest_client.post("/catalog/", data=DATA_CATALOG[0])
         PURCHASE_DATA["catalog_name"] = self.cat_obj.data.get("id")
+        print(">>> PURDATA", PURCHASE_DATA)
         self.purchase_obj = self.guest_client.post("/purchase/", data=PURCHASE_DATA)
 
     def test_arrival_page(self):

@@ -24,7 +24,9 @@ example {"name": "wax", "volume": 30, "company": "black"}
 #### purchase/
 Эндпойнт который регистрирует покупку материала, выдает историю закупок и можно выборочно по индексу выбирать закупку
 
-при создании записи, по дефолту ставится статус в arrrival WAY - on the way
+Оформляя зааказ, каждый раз создается новая запись в таблице purchase. 
+
+При создании записи, по дефолту ставится статус в arrrival WAY - on the way
 
 С получением и отметкой о поступлении товара, статус arrival изменится на ARR - arrived
 
@@ -37,28 +39,38 @@ post method:
 
 purchase/
 
-- catalog_name: int
-- date_purchase: str
-- quantity: int
-- volume: int
-- price: int
-- comment: str | None
-- arrival: int
+- catalog_name **automaticaly required**
+- name: str **required**
+- volume: int **required**
+- company: str **required**
+- date_purchase: str ex: 2022-04-01 **required**
+- quantity: int **required**
+- price: int **required** 
+- comment: str | None **null=True**
+- arrival: int **null=True**
 
-example {"catalog_name": 1, "date_purchase": "2022-01-01", "quantity": 1, "volume": 30, "price": 777, "comments": "Hello", "arrival": 1}
+example {"date_purchase": "2022-01-01", "quantity": 1, "volume": 30, "price": 777, "comments": "Hello", "arrival": 1}
 
 arrival/
 -
-Эндпойнт для отметки прибытия товара.
+Эндпойнт для фиксации прибытия товара/материала.
 
 После его поступления, будет запись в таблице InStock.
 
 Если записи нет, то будет создана, если запись ранее была, то будет обновление.
 
+###_Характеристики функционала arrival_:
+
+- name поле уникальное
+- quantity, значение поля количество заказанных позиций товара/материала. Если поле не передано, то по умолчанию будет 
+применено значение один.
+Если заказано несколько единиц одной каталожной позиции, то quantity уиножается на единицу измерения, заказанной позиции.
+
 #### post method
 
 data-
 - name: str
+- quantity: int
 - volume: int
 
 example {"name": "wax-1", "volume": 30}

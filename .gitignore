@@ -4,3 +4,5 @@ migrations_local
 __pycache__
 migrations
 migrations_docker
+logs
+
