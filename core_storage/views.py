@@ -1,8 +1,11 @@
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import mixins, status, viewsets
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
-from rest_framework import status, viewsets, mixins
-from core_storage.models import Catalog, Purchase, InStock
-from core_storage.serializers import CatalogSerializer, PurchaseSerializer, InStockSerializer
+
+from core_storage.models import Catalog, InStock, Purchase
+from core_storage.serializers import (CatalogSerializer, InStockSerializer,
+                                      PurchaseSerializer)
 
 
 class EnablePartialUpdateMixin:
@@ -18,6 +21,7 @@ class EnablePartialUpdateMixin:
 
 class CreateUpdateViewSet(
     mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
     viewsets.GenericViewSet
 ):
     pass
@@ -60,48 +64,20 @@ class InStockViewSet(ListRetrieveViewSet):
     queryset = InStock.objects.all()
     serializer_class = InStockSerializer
 
-
 class ArrivalViewSet(CreateUpdateViewSet):
-    serializer_class = InStockSerializer
     queryset = InStock.objects.all()
-    # def create(self, request, *args, **kwargs):
-    #     queryset = InStock.objects.all()
-    #     arrival_data = request.data
-    #     for position in arrival_data:
-    #         try:
-    #             obj = queryset.get(name=position["name"])
-    #             serializer = InStockSerializer(data=request.data)
-    #             res = serializer.is_valid()
-    #             custom_is_valid(serializer.initial_data)
-    #             availability = obj.availability
-    #             if availability is False or availability is None:
-    #                 availability = True
-    #             volume = queryset.volume + int(request.data["volume"])
-    #         except ObjectDoesNotExist:
-    #             serializer = InStockSerializer(data=position)
-    #             if serializer.is_valid(raise_exception=True):
-    #                 serializer.save()
-    #                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-    #             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer_class = InStockSerializer
 
-
-
-# class ArrivalViewSet(viewsets.ViewSet):
-#     queryset = InStock.objects.all()
-#     serializer_class = InStockSerializer
-#
-#     def create(self, request):
-#         queryset = InStock.objects.filter(name=request.data["name"])
-#         if queryset.exists():
-#             volume = queryset.first().volume + int(request.data["volume"])
-#             obj, result = queryset.update_or_create(name=request.data["name"], defaults={'volume': volume})
-#             serializer = InStockSerializer(obj)
-#             return Response(serializer.data, status=status.HTTP_200_OK)
-#         serializer = InStockSerializer(data=request.data)
-#         if serializer.is_valid(raise_exception=True):
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def create(self, request, **kwargs):
+        data = request.data
+        try:
+            obj = InStock.objects.get(name=data.get("name"))
+            serializer = InStockSerializer(data=data, instance=obj)
+        except ObjectDoesNotExist:
+            serializer = InStockSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class ProductionViewSet(EnablePartialUpdateMixin, UpdateDestroyViewSet):

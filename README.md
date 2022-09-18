@@ -66,19 +66,28 @@ arrival/
 применено значение один.
 Если заказано несколько единиц одной каталожной позиции, то quantity уиножается на единицу измерения, заказанной позиции.
 
+#### arrival/
+
+выдает список всех позиций в таблице Instock
+
 #### post method
+arrival/
 
-data-
-- name: str
-- quantity: int
-- volume: int
+data:
+- name: str required
+- quantity: int required
+- volume: int required
 
-example {"name": "wax-1", "volume": 30}
+example {"name": "wax-1", "volume": 30, "quantity": 2}
 
 
-#### instock/
+#### instock/ get method
 
 выдает весь список наличия товара на складе
+
+#### arrival/{pk: int}/ get method
+
+Выдает один объект из таблицы Instock
 
 
 #### production/

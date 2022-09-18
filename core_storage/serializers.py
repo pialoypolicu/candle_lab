@@ -1,14 +1,13 @@
-from rest_framework import serializers
-from rest_framework.exceptions import ParseError
+from django.core import exceptions
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from django.core import exceptions
+from rest_framework import serializers
+from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 
 from candle_lab.logger import Logger
-from django.core.exceptions import ObjectDoesNotExist
-
-from core_storage.models import Catalog, Purchase, InStock
+from core_storage.models import Catalog, InStock, Purchase
 
 logmngr = Logger(directory="core_storage", file="serializers")
 
@@ -47,3 +46,15 @@ class InStockSerializer(serializers.ModelSerializer):
     class Meta:
         model = InStock
         fields = ("name", "volume", "purchase", "availability", "update_date")
+    # TODO что то сделать с проверкой поля quantity
+    def create(self, validated_data):
+        validated_data["volume"] = self.initial_data["quantity"] * validated_data["volume"]
+        instance = InStock.objects.create(**validated_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        volume = self.initial_data["quantity"] * validated_data["volume"] + instance.volume
+        instance.volume = volume
+        instance.save()
+        return instance
+

@@ -1,11 +1,14 @@
 import json
 import random
+from http import HTTPStatus
 from pprint import pprint
-from tests.constants import DATA_CATALOG, CATEGORIES, PURCHASE_DATA, TEN_ITERATIONS
+
 from django.test import TestCase
 from django.test.client import Client
+
 from core_storage.models import Catalog, Purchase
-from http import HTTPStatus
+from tests.constants import (CATEGORIES, DATA_CATALOG, PURCHASE_DATA,
+                             TEN_ITERATIONS)
 
 
 class Client:
@@ -131,41 +134,46 @@ class ArrivalInstockTest(TestCase):
         cls.data_to_instock = {
             "name": response_purchase.data["catalog_name"],
             "volume": response_purchase.data["volume"],
+            "quantity": 2,
             "availability": True
         }
-        cls.arrival_response = Client.my_client.post("/arrival/", data=cls.data_to_instock)
+        cls.arrival_response = Client.my_client.post(
+            "/arrival/",
+            data=cls.data_to_instock,
+            content_type="application/json"
+        )
+        cls.base_expected_volume = cls.data_to_instock["volume"] * cls.data_to_instock["quantity"]
+        cls.instock_objects = Client.my_client.get("/instock/")
 
-    def test_create_object_in_stock(self):
+    def test_create_object_instock(self):
         """Проверяем создание записи в таблице InStock"""
-        instock_object = Client.my_client.get("/instock/")
-        for field, expected_value in self.data_to_instock.items():
-            with self.subTest(field=field):
-                self.assertEqual(
-                    instock_object.data[0].get(field), expected_value, "Запись в таблице instock не создана")
+        self.assertEqual(self.data_to_instock['name'], self.instock_objects.data[0]['name'], "Запись в таблице instock не создана")
+
+    def test_volume_field(self):
+        self.assertEqual(self.base_expected_volume, self.instock_objects.data[0]['volume'], "Не верно quantity")
 
     def test_unique_object_instock(self):
-        """Проверка, что вторая запись с таким же названием в InStoc не создается"""
-        response = Client.my_client.get("/instock/")
-        expected_objects = len(response.data)
-        Client.my_client.post("/arrival/", data=self.data_to_instock)
+        """Проверка, что вторая запись с таким же названием в InStock не создается"""
+        expected_objects = len(self.instock_objects.data)
+        Client.my_client.post("/arrival/", data=self.data_to_instock, content_type="application/json")
         total_objects_instock = len(Client.my_client.get("/instock/").data)
-        self.assertEqual(total_objects_instock, expected_objects, "создана не уникальная запись в instock")
+        self.assertEqual(expected_objects, total_objects_instock, "создана не уникальная запись в instock")
 
-    def test_update_object_instock(self):
+    def test_update_volume_object_instock(self):
         """Проверка изменения сушествующего объекта"""
-        Client.my_client.post("/arrival/", data=self.data_to_instock)
-        expected_objects = 60
-        total_object_volume = Client.my_client.get("/instock/").data[0]["volume"]
-        self.assertEqual(total_object_volume, expected_objects, "Запись в InStock не обновлена")
+        Client.my_client.post("/arrival/", data=self.data_to_instock, content_type="application/json")
+        object_volume = Client.my_client.get("/instock/").data[0]["volume"]
+        new_volume = self.data_to_instock["volume"] * self.data_to_instock["quantity"]
+        expected_volume = self.base_expected_volume + new_volume
+        self.assertEqual(expected_volume, object_volume, "Запись в InStock не обновлена")
 
     def test_retrieve_instock(self):
         """
              Проверяем retrieve метод. Возвращение правильного объекта по id.
         """
-        arrival_id = self.arrival_response.data["id"]
-        response = Client.my_client.get(f"/instock/{arrival_id}/")
-        expected_id = 2
-        self.assertEqual(expected_id, response.data['id'], "Вернулся не верный объект")
+        response = Client.my_client.get(f"/instock/1/")
+        expected_data_name = self.data_to_instock["name"]
+        self.assertEqual(expected_data_name, response.data['name'], "Вернулся не верный объект")
 
 
 class ProductionTest(TestCase):
