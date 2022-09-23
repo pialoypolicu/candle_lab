@@ -27,27 +27,44 @@ class PurchaseSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "company", "date_purchase", "quantity", "volume", "price", "comment", "arrival", "catalog_name")
 
     def create(self, validated_data):
-        name = validated_data["name"]
+        name = validated_data["name"].lower()
         volume = validated_data["volume"]
-        company = validated_data["company"]
+        company = validated_data["company"].lower()
         try:
             catalog_obj = Catalog.objects.get(Q(name=name) & Q(volume=volume) & Q(company=company))
-            catalog_obj_id = catalog_obj.id
-            validated_data["catalog_name_id"] = catalog_obj_id
-            obj = Purchase.objects.create(**validated_data)
-            return obj
-        except exceptions.ObjectDoesNotExist as error:
+        except exceptions.ObjectDoesNotExist:
             logmngr.logger.warning("object not exists", name=name)
-            raise ParseError(detail=f"object - {name} not exists", code='core_storage.serializers')
+            raise serializers.ValidationError(detail=f"Catalog object - {name} not exists", code='core_storage.serializers')
+        catalog_obj_id = catalog_obj.id
+        validated_data["catalog_name_id"] = catalog_obj_id
+        obj = Purchase.objects.create(**validated_data)
+        return obj
 
 
 class InStockSerializer(serializers.ModelSerializer):
     purchase = PurchaseSerializer(read_only=True)
+
     class Meta:
         model = InStock
-        fields = ("name", "volume", "purchase", "availability", "update_date")
-    # TODO что то сделать с проверкой поля quantity
+        fields = ("id", "name", "volume", "purchase", "availability","update_date")
+
+
+class ArrivalInStockSerializer(serializers.ModelSerializer):
+    purchase = PurchaseSerializer(read_only=True)
+    quantity = serializers.IntegerField(write_only=True, required=True)
+
+    class Meta:
+        model = InStock
+        fields = ("id", "name", "volume", "purchase", "availability", "update_date", "quantity")
+
     def create(self, validated_data):
+        name = validated_data["name"]
+        try:
+             Catalog.objects.get(name=name)
+        except (Exception, ObjectDoesNotExist) as error:
+            print(error)
+            logmngr.logger.warning(f"obj {name} not exists in Purchase", name=name)
+            raise serializers.ValidationError(detail=f"object - {name} not exists", code='core_storage.serializers')
         validated_data["volume"] = self.initial_data["quantity"] * validated_data["volume"]
         instance = InStock.objects.create(**validated_data)
         return instance

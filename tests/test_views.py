@@ -70,7 +70,6 @@ class PurchaseTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-
         cls.response_catalog = cls.my_client.post("/catalog/", data=DATA_CATALOG[0])
         for i in range(10):
             cls.my_client.post(
@@ -78,47 +77,50 @@ class PurchaseTest(TestCase):
                 data=PURCHASE_DATA,
                 content_type='application/json'
             )
-        cls.purchases = cls.my_client.get("/purchase/")
+        cls.purchases_data = cls.my_client.get("/purchase/").data
+        cls.random_purchase_data = random.choice(cls.purchases_data)
+        cls.purchase_id = cls.random_purchase_data['id']
 
     def test_create_purchase(self):
         """Проверяем создание записи в Purchase"""
-        get_obj = Purchase.objects.get(id=self.purchases.data[0]["id"])
-        expected = "wax_1"
-        self.assertEqual(expected, get_obj.catalog_name.name)
+        get_obj = Purchase.objects.get(id=self.purchase_id)
+        self.assertEqual(get_obj.id, self.purchase_id)
 
     def test_list_purchase_viewset(self):
         """Вывод всех записей."""
         expected = TEN_ITERATIONS
-        total_row = len(self.purchases.data)
+        total_row = len(self.purchases_data)
         self.assertEqual(total_row, expected, "Выводимое количество покупок, не соответствует")
 
     def test_retrieve_purchase(self):
         """Проверяем выдается ли запись по индексу"""
-        expected_name = self.response_catalog.data.get("name")
-        purchase_id = random.choice(self.purchases.data).get('id')
-        purchase_id_response = Client.my_client.get(f"/purchase/{purchase_id}/")
-        purchase_id_data = purchase_id_response.data
-        purchase_comment = purchase_id_data.get("comment")
-        purchase_name = purchase_id_data.get("name")
-        self.assertEqual(expected_name, purchase_name, "Не выводит элемент по индексу")
+        purchase_response_data = Client.my_client.get(f"/purchase/{self.purchase_id}/").data
+        self.assertEqual(self.purchase_id, purchase_response_data["id"], "Не выводит элемент по индексу")
 
     def test_put_purchase(self):
-        """Проверим будет ли выполнено изменение на методе PUT"""
-        purchase_id = Client.my_client.get("/purchase/").data[-1].get('id')
+        """
+        Проверим будет возвращение ответа METHOD_NOT_ALLOWED
+        при попытке изменения записи purchase
+         """
         data = {"quantity": 3}
-        purchase_id_response = Client.my_client.put(f"/purchase/{purchase_id}/", data=data)
+        purchase_id_response = Client.my_client.put(f"/purchase/{self.purchase_id}/", data=data)
         expected = HTTPStatus.METHOD_NOT_ALLOWED
         self.assertEqual(expected, purchase_id_response.status_code, "Статус ответа не совпаадает с ожидаемым")
 
     def test_raise_parse_error(self):
+        """
+        Проверяме, вызов исключения и текст ошибки, если при заказе purchase
+        передать имя отсутствующее в каталоге.
+        :return:
+        """
         PURCHASE_DATA["name"] = "wax_2"
         response = self.my_client.post(
             "/purchase/",
             data=PURCHASE_DATA,
             content_type='application/json'
         )
-        expected_text_error = f'object - {PURCHASE_DATA["name"]} not exists'
-        response_text = json.loads(response.content)["detail"]
+        expected_text_error = f'Catalog object - {PURCHASE_DATA["name"]} not exists'
+        response_text = json.loads(response.content)[0]
         self.assertEqual(expected_text_error, response_text, "Текст ошибки не совпадает")
 
 
@@ -180,26 +182,30 @@ class ProductionTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.cat_obj = Client.my_client.post("/catalog/", data=DATA_CATALOG[0])
+        cls.my_client = Client.my_client
+        cls.cat_obj = cls.my_client.post("/catalog/", data=DATA_CATALOG[0])
         PURCHASE_DATA["catalog_name"] = cls.cat_obj.data.get("id")
-        cls.purchase_obj = Client.my_client.post("/purchase/", data=PURCHASE_DATA)
+        cls.purchase_obj = cls.my_client.post("/purchase/", data=PURCHASE_DATA)
         cls.purchase_obj_id = cls.purchase_obj.data.get("id")
-        response_purchase = Client.my_client.get(f"/purchase/{cls.purchase_obj_id}/")
+        response_purchase = cls.my_client.get(f"/purchase/{cls.purchase_obj_id}/")
         cls.data_to_instock = {
             "name": response_purchase.data["catalog_name"],
             "volume": response_purchase.data["volume"],
+            "quantity": response_purchase.data["quantity"],
             "availability": True,
         }
-        cls.response = Client.my_client.post("/arrival/", data=cls.data_to_instock)
+        cls.response = cls.my_client.post("/arrival/", data=cls.data_to_instock, content_type="application/json")
         cls.data_update = {"volume": 7}
-        cls.id = cls.response.data['id']
+
+        cls.response_instock = cls.my_client.get("/instock/")
+        print(">>> response_instock", cls.response_instock.data)
 
 
     def test_partial_update_pruduction(self):
         """Проверка изменения volume"""
         expected = 23
-        Client.my_client.patch(f"/production/{self.id}/", data=self.data_update, content_type="application/json")
-        response = Client.my_client.get(f"/instock/{self.id}/")
+        self.my_client.patch("/production/1/", data=self.data_update, content_type="application/json")
+        response = self.my_client.get("/instock/1/")
         self.assertEqual(expected, response.data["volume"], "Некорректно выполнен partial upd записи в Instock")
         # TODO: удаление записи
 
@@ -207,7 +213,7 @@ class ProductionTest(TestCase):
     def test_update_production(self):
         """Проверяем update записи"""
         expected = 7
-        Client.my_client.put(f"/production/{self.id}/", data=self.data_update, content_type="application/json")
-        response = Client.my_client.get(f"/instock/{self.id}/")
+        self.my_client.put(f"/production/{self.id}/", data=self.data_update, content_type="application/json")
+        response = self.my_client.get(f"/instock/{self.id}/")
         self.assertEqual(expected, response.data["volume"], "Некорректно выполнен update записи в Instock")
 

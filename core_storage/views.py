@@ -4,8 +4,8 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from core_storage.models import Catalog, InStock, Purchase
-from core_storage.serializers import (CatalogSerializer, InStockSerializer,
-                                      PurchaseSerializer)
+from core_storage.serializers import (CatalogSerializer, ArrivalInStockSerializer,
+                                      PurchaseSerializer, InStockSerializer)
 
 
 class EnablePartialUpdateMixin:
@@ -66,27 +66,32 @@ class InStockViewSet(ListRetrieveViewSet):
 
 class ArrivalViewSet(CreateUpdateViewSet):
     queryset = InStock.objects.all()
-    serializer_class = InStockSerializer
+    serializer_class = ArrivalInStockSerializer
 
     def create(self, request, **kwargs):
         data = request.data
         try:
             obj = InStock.objects.get(name=data.get("name"))
-            serializer = InStockSerializer(data=data, instance=obj)
+            serializer = ArrivalInStockSerializer(data=data, instance=obj)
         except ObjectDoesNotExist:
-            serializer = InStockSerializer(data=data)
+            serializer = ArrivalInStockSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
 
-class ProductionViewSet(EnablePartialUpdateMixin, UpdateDestroyViewSet):
-    # TODO установить пермишены. метод update для супер юзера, partial для всех зареганных
+class ProductionViewSet(UpdateDestroyViewSet):
     queryset = InStock.objects.all()
-    serializer_class = InStockSerializer
+    serializer_class = ArrivalInStockSerializer
 
-    def partial_update(self, request, *args, **kwargs):
-        kwargs['partial'] = True
-        obj = get_object_or_404(self.queryset, pk=kwargs['pk'])
-        request.data["volume"] = obj.volume - request.data["volume"]
-        return self.update(request, *args, **kwargs)
+
+# class ProductionViewSet(EnablePartialUpdateMixin, UpdateDestroyViewSet):
+#     # TODO установить пермишены. метод update для супер юзера, partial для всех зареганных
+#     queryset = InStock.objects.all()
+#     serializer_class = InStockSerializer
+#
+#     def partial_update(self, request, *args, **kwargs):
+#         kwargs['partial'] = True
+#         obj = get_object_or_404(self.queryset, pk=kwargs['pk'])
+#         request.data["volume"] = obj.volume - request.data["volume"]
+#         return self.update(request, *args, **kwargs)
