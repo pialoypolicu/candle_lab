@@ -13,7 +13,7 @@ PURCHASE_DATA = {
             "volume": 30,
             "company": "black",
             "date_purchase": "2022-04-01",
-            "quantity": 1,
+            "quantity": 2,
             "price": 1000,
             "comment": "Very good candles",
         }

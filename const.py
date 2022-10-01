@@ -1,0 +1,1 @@
+ZERO_QUANTITY = 0

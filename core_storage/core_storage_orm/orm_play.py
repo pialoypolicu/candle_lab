@@ -1,8 +1,8 @@
 import datetime
-
+from const import ZERO_QUANTITY
 from django.core.exceptions import ObjectDoesNotExist
 from pprint import pprint
-from core_storage.models import InStock
+from core_storage.models import InStock, ArrivalChoice
 
 
 def create_or_update_instock(data):
@@ -22,3 +22,13 @@ def create_or_update_instock(data):
     else:
         create_object_instock = InStock.objects.create(name=name, weight=weight)
         return create_object_instock
+
+
+def update_db(obj, quantity):
+    quantity = obj.quantity - quantity
+    if quantity > ZERO_QUANTITY:
+        obj.quantity = quantity
+    else:
+        obj.quantity = ZERO_QUANTITY
+        obj.arrival = ArrivalChoice.ARR
+    obj.save()

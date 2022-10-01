@@ -6,7 +6,7 @@ from pprint import pprint
 from django.test import TestCase
 from django.test.client import Client
 
-from core_storage.models import Catalog, Purchase
+from core_storage.models import Catalog, Purchase, ArrivalChoice
 from tests.constants import (CATEGORIES, DATA_CATALOG, PURCHASE_DATA,
                              TEN_ITERATIONS)
 
@@ -125,34 +125,40 @@ class PurchaseTest(TestCase):
 
 
 class ArrivalInstockTest(TestCase):
+    my_client = Client.my_client
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.cat_obj = Client.my_client.post("/catalog/", data=DATA_CATALOG[0])
+        cls.cat_obj = cls.my_client.post("/catalog/", data=DATA_CATALOG[0])
         PURCHASE_DATA["catalog_name"] = cls.cat_obj.data.get("id")
-        cls.purchase_obj = Client.my_client.post("/purchase/", data=PURCHASE_DATA)
+        cls.purchase_obj = cls.my_client.post("/purchase/", data=PURCHASE_DATA)
         cls.purchase_obj_id = cls.purchase_obj.data.get("id")
-        response_purchase = Client.my_client.get(f"/purchase/{cls.purchase_obj_id}/")
+        response_purchase = cls.my_client.get(f"/purchase/{cls.purchase_obj_id}/")
         cls.data_to_instock = {
             "name": response_purchase.data["catalog_name"],
             "volume": response_purchase.data["volume"],
-            "quantity": 2,
+            "quantity": 1,
+            "company": "black",
             "availability": True
         }
-        cls.arrival_response = Client.my_client.post(
+        cls.arrival_response = cls.my_client.post(
             "/arrival/",
             data=cls.data_to_instock,
             content_type="application/json"
         )
         cls.base_expected_volume = cls.data_to_instock["volume"] * cls.data_to_instock["quantity"]
-        cls.instock_objects = Client.my_client.get("/instock/")
+        cls.instock_objects = cls.my_client.get("/instock/")
+        cls.purchase_data_after_partial_upd = cls.my_client.get(f"/purchase/{cls.purchase_obj_id}/").data
+        cls.expected_quantity_after_partial_update = response_purchase.data["quantity"] - cls.data_to_instock["quantity"]
+
 
     def test_create_object_instock(self):
         """Проверяем создание записи в таблице InStock"""
         self.assertEqual(self.data_to_instock['name'], self.instock_objects.data[0]['name'], "Запись в таблице instock не создана")
 
     def test_volume_field(self):
-        self.assertEqual(self.base_expected_volume, self.instock_objects.data[0]['volume'], "Не верно quantity")
+        """проверяем вычитание volume"""
+        self.assertEqual(self.base_expected_volume, self.instock_objects.data[0]['volume'], "Не верно volume")
 
     def test_unique_object_instock(self):
         """Проверка, что вторая запись с таким же названием в InStock не создается"""
@@ -177,6 +183,42 @@ class ArrivalInstockTest(TestCase):
         expected_data_name = self.data_to_instock["name"]
         self.assertEqual(expected_data_name, response.data['name'], "Вернулся не верный объект")
 
+    def test_update_quantity_field_purchase_object(self):
+        """
+        После поступления товара, происходит изменение записи объекта purchase
+        Проверяем изменения поле quantity
+        Сначала поступает один элемент, quantity уменьшается на одну позицию.
+        Затем поступает последний заказ из ожидаемого в списке, который уменьшает значение quantity до нуля
+        """
+        self.assertEqual(
+            self.expected_quantity_after_partial_update,
+            self.purchase_data_after_partial_upd["quantity"],
+            "не верно обновилось значение quantity в объекте purchase"
+        )
+        self.my_client.post(
+            "/arrival/",
+            data=self.data_to_instock,
+            content_type="application/json"
+        )
+        expected_quantity = self.expected_quantity_after_partial_update - self.data_to_instock["quantity"]
+        purchase_response = self.my_client.get(f"/purchase/{self.purchase_obj_id}/").data
+        self.assertEqual(expected_quantity, purchase_response["quantity"], "quantity не равно нулю")
+
+    def test_update_arrival_field_purchase_object(self):
+        """
+        После поступления товара, происходит изменение записи объекта purchase
+        Проверяем изменения поле arrival
+        статус arrival появляется, когда поступают все единицы заказаного товарра, т.е. quantity == 0
+        """
+
+        self.my_client.post(
+            "/arrival/",
+            data=self.data_to_instock,
+            content_type="application/json"
+        )
+        expected_arrival_status = ArrivalChoice.ARR
+        purchase_response = self.my_client.get(f"/purchase/{self.purchase_obj_id}/").data
+        self.assertEqual(expected_arrival_status, purchase_response["arrival"], "Статус arrival field не верный")
 
 class ProductionTest(TestCase):
     @classmethod
@@ -198,7 +240,6 @@ class ProductionTest(TestCase):
         cls.data_update = {"volume": 7}
 
         cls.response_instock = cls.my_client.get("/instock/")
-        print(">>> response_instock", cls.response_instock.data)
 
 
     def test_partial_update_pruduction(self):

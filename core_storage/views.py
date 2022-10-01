@@ -1,6 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import mixins, status, viewsets
-from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from core_storage.models import Catalog, InStock, Purchase
@@ -64,20 +63,29 @@ class InStockViewSet(ListRetrieveViewSet):
     queryset = InStock.objects.all()
     serializer_class = InStockSerializer
 
+
 class ArrivalViewSet(CreateUpdateViewSet):
-    queryset = InStock.objects.all()
     serializer_class = ArrivalInStockSerializer
 
-    def create(self, request, **kwargs):
-        data = request.data
+    def get_queryset(self, data):
         try:
-            obj = InStock.objects.get(name=data.get("name"))
-            serializer = ArrivalInStockSerializer(data=data, instance=obj)
+            return InStock.objects.get(name=data.get("name"))
         except ObjectDoesNotExist:
+            # todo logger
+            return None
+
+    def create(self, request, *args, **kwargs):
+        data = self.request.data
+        instock_object = self.get_queryset(data)
+        if instock_object:
+            serializer = ArrivalInStockSerializer(data=data, instance=instock_object)
+            response_status = status.HTTP_200_OK
+        else:
             serializer = ArrivalInStockSerializer(data=data)
+            response_status = status.HTTP_201_CREATED
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(serializer.data, status=response_status)
 
 
 class ProductionViewSet(UpdateDestroyViewSet):
