@@ -90,7 +90,7 @@ class ArrivalViewSet(CreateUpdateViewSet):
 
 class ProductionViewSet(UpdateDestroyViewSet):
     queryset = InStock.objects.all()
-    serializer_class = ArrivalInStockSerializer
+    serializer_class = InStockSerializer
 
 
 # class ProductionViewSet(EnablePartialUpdateMixin, UpdateDestroyViewSet):

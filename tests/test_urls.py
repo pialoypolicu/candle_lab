@@ -28,14 +28,17 @@ class ArrivalURLTests(TestCase):
         self.guest_client = Client()
         self.cat_obj = self.guest_client.post("/catalog/", data=DATA_CATALOG[0])
         PURCHASE_DATA["catalog_name"] = self.cat_obj.data.get("id")
-        print(">>> PURDATA", PURCHASE_DATA)
-        self.purchase_obj = self.guest_client.post("/purchase/", data=PURCHASE_DATA)
+        self.purchase_response = self.guest_client.post("/purchase/", data=PURCHASE_DATA)
+        self.purchase_data = self.purchase_response.data
 
     def test_arrival_page(self):
         """Проверка возвращаемого ответа 201 при создании записи в InStock"""
-        data = {}
-        data["name"] = self.purchase_obj.data.get("id")
-        data["volume"] = self.purchase_obj.data.get("volume")
+        data = {
+            "name": self.purchase_data["name"],
+            "volume": self.purchase_data["volume"],
+            "quantity": self.purchase_data["quantity"],
+            "company": self.purchase_data["company"],
+        }
         response = self.guest_client.post('/arrival/', data=data)
         self.assertEqual(response.status_code, HTTPStatus.CREATED, "Статус ответа не соответствует")
 

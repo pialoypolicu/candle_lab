@@ -29,8 +29,7 @@ class PurchaseSerializer(serializers.ModelSerializer):
         volume = validated_data["volume"]
         company = validated_data["company"].lower()
         try:
-            # todo get_object_or_404
-            catalog_obj = Catalog.objects.get(Q(name=name) & Q(volume=volume) & Q(company=company))
+            catalog_obj = get_object_or_404(Catalog, name=name, volume=volume, company=company)
         except exceptions.ObjectDoesNotExist:
             logmngr.logger.warning("object not exists", name=name)
             raise serializers.ValidationError(detail=f"Catalog object - {name} not exists", code='core_storage.serializers')
