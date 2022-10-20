@@ -2,9 +2,9 @@ from django.core import exceptions
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from core_storage.core_storage_orm.orm_play import update_db
 
 from candle_lab.logger import Logger
+from core_storage.core_storage_orm.orm_play import update_db
 from core_storage.models import Catalog, InStock, Purchase
 
 logmngr = Logger(directory="core_storage", file="serializers")
@@ -78,3 +78,15 @@ class ArrivalInStockSerializer(serializers.ModelSerializer):
         update_db(purchase_object, quantity)
         return instance
 
+class ProductionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InStock
+        fields = ("id", "name", "volume", "purchase", "availability", "update_date")
+
+    def update(self, instance, validated_data):
+        instance.volume = instance.volume - validated_data["volume"]
+        try:
+            instance.save()
+        except Exception as e:
+            logmngr.logger.warning(e)
+        return instance

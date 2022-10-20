@@ -1,11 +1,20 @@
+from functools import reduce
+from operator import or_
+
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
+from django.shortcuts import get_list_or_404
+from loguru import logger
 from rest_framework import mixins, status, viewsets
 from rest_framework.response import Response
 
+from candle_lab.logger import Logger
 from core_storage.models import Catalog, InStock, Purchase
-from core_storage.serializers import (CatalogSerializer, ArrivalInStockSerializer,
-                                      PurchaseSerializer, InStockSerializer)
+from core_storage.serializers import (ArrivalInStockSerializer,
+                                      CatalogSerializer, InStockSerializer,
+                                      ProductionSerializer, PurchaseSerializer)
 
+logmngr = Logger(directory="core_storage", file="views")
 
 class EnablePartialUpdateMixin:
     """Enable partial updates
@@ -38,12 +47,6 @@ class CreateRetrieveListViewSet(
 class ListRetrieveViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
-    viewsets.GenericViewSet
-):
-    pass
-
-class UpdateDestroyViewSet(
-    mixins.UpdateModelMixin,
     viewsets.GenericViewSet
 ):
     pass
@@ -88,18 +91,21 @@ class ArrivalViewSet(CreateUpdateViewSet):
         return Response(serializer.data, status=response_status)
 
 
-class ProductionViewSet(UpdateDestroyViewSet):
-    queryset = InStock.objects.all()
-    serializer_class = InStockSerializer
-
-
-# class ProductionViewSet(EnablePartialUpdateMixin, UpdateDestroyViewSet):
-#     # TODO установить пермишены. метод update для супер юзера, partial для всех зареганных
-#     queryset = InStock.objects.all()
-#     serializer_class = InStockSerializer
-#
-#     def partial_update(self, request, *args, **kwargs):
-#         kwargs['partial'] = True
-#         obj = get_object_or_404(self.queryset, pk=kwargs['pk'])
-#         request.data["volume"] = obj.volume - request.data["volume"]
-#         return self.update(request, *args, **kwargs)
+class ProductionViewSet(viewsets.ViewSet):
+    serializer_class = ProductionSerializer
+    def update(self, request):
+        instances = list()
+        data = request.data
+        data = {item.pop("name"): item for item in data}
+        names = list(data.keys())
+        query = reduce(or_, (Q(name=key) for key in names))
+        queryset = get_list_or_404(InStock, query)
+        for q in queryset:
+            serializer = ProductionSerializer(q, data=data[q.name], partial=True)
+            try:
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                instances.append(serializer.data)
+            except Exception as e:
+                logmngr.logger.warning(e)
+        return Response(instances)
